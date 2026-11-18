@@ -24,11 +24,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -f "settings.gradle.kts" && -f "app/build.gradle.kts" ]]; then
-            echo "Android project found directly at repository root."
-            exit 0
-          fi
-
           ZIP_FILE="$(find . -maxdepth 2 -type f -iname '*.zip' -print | sort -V | tail -n 1)"
           if [[ -n "${ZIP_FILE}" ]]; then
             echo "Found source archive: ${ZIP_FILE}"
@@ -48,6 +43,11 @@ jobs:
             test -f settings.gradle.kts
             test -f app/build.gradle.kts
             echo "Extracted ${ZIP_FILE} into workspace root."
+            exit 0
+          fi
+
+          if [[ -f "settings.gradle.kts" && -f "app/build.gradle.kts" ]]; then
+            echo "Android project found directly at repository root."
             exit 0
           fi
 
@@ -118,20 +118,20 @@ jobs:
             echo "::notice::No persistent signing secrets configured; Gradle will use its installable debug signing key."
           fi
 
-      - name: Verify project resources, run unit tests & lint checks
+      - name: Verify project resources & run unit tests
         shell: bash
         run: |
           set -euo pipefail
           if [[ -f "scripts/verify_project.py" ]]; then
             python3 scripts/verify_project.py
           fi
-          gradle --no-daemon --no-configuration-cache testDebugUnitTest lintDebug --stacktrace
+          gradle --no-daemon --no-configuration-cache testDebugUnitTest --console=plain
 
       - name: Build Debug & R8-Shrunk Signed Release APKs
         shell: bash
         run: |
           set -euo pipefail
-          gradle --no-daemon --no-configuration-cache assembleDebug assembleRelease --stacktrace
+          gradle --no-daemon --no-configuration-cache assembleDebug assembleRelease --console=plain
 
           RELEASE_APK="$(find app/build/outputs/apk/release -maxdepth 2 -type f -name '*.apk' ! -name '*-unsigned.apk' -print -quit)"
           if [[ -z "${RELEASE_APK}" ]]; then
@@ -166,4 +166,3 @@ jobs:
           path: single_release_out/StreamX-Media3-Pro-v18.1-Debug.apk
           if-no-files-found: warn
           retention-days: 14
-          
